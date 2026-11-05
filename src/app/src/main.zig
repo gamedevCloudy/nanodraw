@@ -12,7 +12,8 @@ const default_port = 7411;
 
 pub fn main(init: std.process.Init) !void {
     const gpa = init.gpa;
-    const app_data = try nanoui.path(gpa, .data, "excalibre");
+    // EXCALIBRE_DATA_DIR keeps tests and parallel runs off the real history.
+    const app_data = if (init.environ_map.get("EXCALIBRE_DATA_DIR")) |d| try gpa.dupe(u8, d) else try nanoui.path(gpa, .data, "excalibre");
     log.init(app_data);
 
     var st = try store.Store.open(gpa, app_data);
