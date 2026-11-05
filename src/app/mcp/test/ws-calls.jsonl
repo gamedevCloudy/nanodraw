@@ -1,0 +1,4 @@
+{"id":"t1","method":"canvas.applyPatch","params":{"create":[{"type":"rectangle","id":"r1","x":10,"y":20}]}}
+{"id":"t2","method":"canvas.getScene","params":{}}
+{"id":"t3","method":"canvas.screenshot","params":{}}
+{"id":"t4","method":"file.save","params":{}}

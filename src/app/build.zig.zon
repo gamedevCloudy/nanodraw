@@ -1,0 +1,13 @@
+.{
+    .name = .excalibre,
+    .fingerprint = 0x87d063cf42a9b568,
+    .version = "0.1.0",
+    .minimum_zig_version = "0.17.0",
+    .dependencies = .{
+        .nanoui = .{
+            .url = "git+https://github.com/justrach/nanoui?ref=v0.5.0#bae24d08097f6503958e5eee8531232de851b601",
+            .hash = "nanoui-0.5.0-we0KMcvyDQBLUpWVorREdjpiySA0-MH-x8hh_xVXkhoS",
+        },
+    },
+    .paths = .{ "build.zig", "build.zig.zon", "src", "web", "mcp" },
+}

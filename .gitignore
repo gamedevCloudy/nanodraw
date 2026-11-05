@@ -1,0 +1,8 @@
+.zig-cache/
+zig-out/
+zig-pkg/
+node_modules/
+**/web/dist/
+dist/
+.DS_Store
+**/web/public/fonts/
