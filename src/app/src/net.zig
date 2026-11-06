@@ -108,6 +108,7 @@ pub const Net = struct {
         const method = parts.next() orelse return error.BadRequest;
         const target = parts.next() orelse return error.BadRequest;
         const path = target[0 .. std.mem.indexOfScalar(u8, target, '?') orelse target.len];
+        log.debug("{s} {s}", .{ method, path });
 
         if (!self.hostOk(head)) return respond(r.stream, 403, "text/plain", "bad host");
         if (std.mem.eql(u8, path, "/mcp")) return self.mcp(r, head);
@@ -152,7 +153,10 @@ pub const Net = struct {
                     .unknown => return respond(s, 404, "text/plain", "unknown doc"),
                     .blank => return respond(s, 200, "application/json", blank_scene),
                     .file => |p| {
-                        const bytes = store.Store.readScene(self.gpa, p) catch return respond(s, 404, "text/plain", "unreadable");
+                        const bytes = store.Store.readScene(self.gpa, p) catch |e| {
+                            log.warn("read {s}: {s}", .{ p, @errorName(e) });
+                            return respond(s, 404, "text/plain", "unreadable");
+                        };
                         defer self.gpa.free(bytes);
                         return respond(s, 200, "application/json", bytes);
                     },
@@ -268,6 +272,7 @@ pub const Net = struct {
             if (!fin) continue;
             defer msg.clearRetainingCapacity();
             const call = protocol.parseMcpCall(self.gpa, msg.items) catch |e| {
+                log.warn("mcp conn {d}: {s}", .{ id, @errorName(e) });
                 // no usable id on a bad envelope
                 const err = protocol.mcpErr(self.gpa, "", @errorName(e)) catch continue;
                 defer self.gpa.free(err);
