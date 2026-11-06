@@ -61,7 +61,7 @@ export function Sidebar() {
             {s.rows.map((r) => (
               <button key={r.path} aria-label={r.label} onClick={() => bridge.openPath(r.path)}
                 style={{ display: "block", width: "100%", textAlign: "left", border: 0, borderRadius: 6, padding: "6px 8px", marginBottom: 2, font: "inherit", cursor: "pointer", background: r.active ? C.row : "transparent", color: r.active ? C.rowText : C.text }}>
-                <div>{r.label}</div>
+                <div>{r.label}{r.dir && <span style={{ fontSize: 11, color: C.muted }}> · {r.dir}</span>}</div>
                 <div style={{ fontSize: 11, color: C.muted }}>{r.count} elements · {ago(r.opened_at)}</div>
                 {r.err && <div style={{ fontSize: 11, color: C.err }}>{r.err}</div>}
               </button>
