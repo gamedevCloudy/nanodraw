@@ -16,7 +16,7 @@ const btn = (C: P, off: boolean): React.CSSProperties => ({
 });
 const icon = (C: P): React.CSSProperties => ({ border: 0, background: "none", color: C.muted, cursor: "pointer", padding: 4, display: "flex" });
 const svg = { width: 16, height: 16, viewBox: "0 0 16 16", fill: "none", stroke: "currentColor", strokeWidth: 1.5, strokeLinecap: "round", strokeLinejoin: "round" } as const;
-const KEY = "excalibre.sidebar";
+const KEY = "nanodraw.sidebar";
 const wasCollapsed = () => { try { return localStorage.getItem(KEY) === "1"; } catch { return false; } };
 
 export function Sidebar() {
@@ -37,7 +37,7 @@ export function Sidebar() {
       style={{ width: collapsed ? 44 : 240, transition: "width 160ms", overflow: "hidden", flex: "none", height: "100%", boxSizing: "border-box", background: C.bg, borderRight: `1px solid ${C.border}`, color: C.text, font: "13px system-ui", display: "flex", flexDirection: "column", padding: collapsed ? "12px 8px" : 12, gap: 8 }}>
       <div style={{ display: "flex", flexDirection: collapsed ? "column" : "row", alignItems: "center", gap: 6, color: C.muted, fontSize: 14, fontWeight: 600 }}>
         <img src={logo} width={20} height={20} alt="" style={{ filter: theme === "dark" ? "invert(0.9)" : "none" }} />
-        {!collapsed && <span style={{ flex: 1 }}>Excalibre</span>}
+        {!collapsed && <span style={{ flex: 1 }}>Nanodraw</span>}
         <button aria-label={theme === "dark" ? "Switch to light theme" : "Switch to dark theme"} style={icon(C)} onClick={toggleTheme}>
           <svg {...svg}>{theme === "dark" ? <><circle cx="8" cy="8" r="3" /><path d="M8 1v2M8 13v2M1 8h2M13 8h2M3 3l1.4 1.4M11.6 11.6L13 13M3 13l1.4-1.4M11.6 4.4L13 3" /></> : <path d="M13 9.5A5.5 5.5 0 0 1 6.5 3 5.5 5.5 0 1 0 13 9.5z" />}</svg>
         </button>

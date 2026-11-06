@@ -22,7 +22,7 @@ const token = () => location.hash.slice(1).replace(/^token=/, "");
 const call = (path: string, init: RequestInit = {}) =>
   fetch(path, {
     ...init,
-    headers: { ...init.headers, "X-Excalibre": "1", Authorization: `Bearer ${token()}` },
+    headers: { ...init.headers, "X-Nanodraw": "1", Authorization: `Bearer ${token()}` },
   });
 
 // Autosave indicator for the sidebar; Cmd+S goes through putDoc too.

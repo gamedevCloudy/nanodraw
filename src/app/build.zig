@@ -38,7 +38,7 @@ pub fn build(b: *std.Build) void {
     exe_mod.addImport("assets", assets);
     exe_mod.addImport("nanoui", nanoui);
     linkSqlite(exe_mod);
-    const exe = b.addExecutable(.{ .name = "excalibre", .root_module = exe_mod });
+    const exe = b.addExecutable(.{ .name = "nanodraw", .root_module = exe_mod });
     b.installArtifact(exe);
 
     // tests: stub assets so `zig build test` needs no npm

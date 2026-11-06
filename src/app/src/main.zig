@@ -12,8 +12,8 @@ const default_port = 7411;
 
 pub fn main(init: std.process.Init) !void {
     const gpa = init.gpa;
-    // EXCALIBRE_DATA_DIR keeps tests and parallel runs off the real history.
-    const app_data = if (init.environ_map.get("EXCALIBRE_DATA_DIR")) |d| try gpa.dupe(u8, d) else try nanoui.path(gpa, .data, "excalibre");
+    // NANODRAW_DATA_DIR keeps tests and parallel runs off the real history.
+    const app_data = if (init.environ_map.get("NANODRAW_DATA_DIR")) |d| try gpa.dupe(u8, d) else try nanoui.path(gpa, .data, "nanodraw");
     log.init(app_data);
 
     var st = try store.Store.open(gpa, app_data);
@@ -25,7 +25,7 @@ pub fn main(init: std.process.Init) !void {
     var n = net.Net.listen(gpa, port, &mailbox) catch |e| {
         std.log.err("listen 127.0.0.1:{d}: {s}", .{ port, @errorName(e) });
         var buf: [160]u8 = undefined;
-        ui.fatal(std.fmt.bufPrint(&buf, "Cannot listen on 127.0.0.1:{d} ({s}). Is Excalibre already running?", .{ port, @errorName(e) }) catch "Cannot listen");
+        ui.fatal(std.fmt.bufPrint(&buf, "Cannot listen on 127.0.0.1:{d} ({s}). Is Nanodraw already running?", .{ port, @errorName(e) }) catch "Cannot listen");
         std.process.exit(1);
     };
 

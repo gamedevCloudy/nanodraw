@@ -163,7 +163,7 @@ pub const Net = struct {
     pub fn ping(self: *Net, conn: ConnId) void;
     pub fn close(self: *Net, conn: ConnId) void;
 };
-// guard(): Host must be 127.0.0.1:<port> (blocks DNS rebinding); /doc and /rpc require header `X-Excalibre: 1`
+// guard(): Host must be 127.0.0.1:<port> (blocks DNS rebinding); /doc and /rpc require header `X-Nanodraw: 1`
 // (a cross-origin page can't send it without a preflight we never grant); /mcp rejects any `Origin`
 // header (browsers always send one on WS; node `ws` does not).
 // Graft from candidate 2: /doc and /rpc also require `Authorization: Bearer <token>`. Zig makes the token at boot
@@ -178,7 +178,7 @@ export interface CanvasRequest { request_id: number; op: CanvasOp }
 export interface CanvasReply { request_id: number; err: string | null }
 export declare const bridge: { onCanvasRequest(cb: (r: CanvasRequest) => void): void;
   canvasReply(r: CanvasReply): void; canvasReady(): void; saveAsRequested(): void };
-// Data plane (same origin, header X-Excalibre: 1):
+// Data plane (same origin, header X-Nanodraw: 1):
 //  GET /doc/:id → 200 scene | 404        PUT /doc/:id (X-Element-Count) → 204 | 409 unknown doc | 500 msg
 //  GET /rpc/:rid → 200 patch | 404       PUT /rpc/:rid → 204 | 404
 // WS /mcp (§7.3 envelope): → {id, method, params}   ← {id, result} | {id, error}. Zig sends ping frames every 5s.

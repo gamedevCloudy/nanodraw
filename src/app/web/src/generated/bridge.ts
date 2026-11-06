@@ -1,5 +1,5 @@
 // Adapts NanoUI's generated client (window.nanoui, flat CanvasWire since tsgen rejects unions) to the
-// CanvasRequest shape canvas.ts uses. Regenerate the raw client: excalibre --nanoui-generate=<dir>.
+// CanvasRequest shape canvas.ts uses. Regenerate the raw client: nanodraw --nanoui-generate=<dir>.
 export type CanvasOp = { load: number } | { flush: number } | { apply: {} } | { get_scene: {} } | { screenshot: {} };
 export interface CanvasRequest { request_id: number; op: CanvasOp }
 export interface CanvasReply { request_id: number; err: string | null }

@@ -14,7 +14,7 @@ const max_head = 16 * 1024;
 const max_body = 256 * 1024 * 1024; // scenes with embedded images
 const max_msg = 64 * 1024 * 1024;
 const ws_guid = "258EAFA5-E914-47DA-95CA-C5AB0DC85B11";
-const blank_scene = "{\"type\":\"excalidraw\",\"version\":2,\"source\":\"excalibre\",\"elements\":[],\"appState\":{},\"files\":{}}";
+const blank_scene = "{\"type\":\"excalidraw\",\"version\":2,\"source\":\"nanodraw\",\"elements\":[],\"appState\":{},\"files\":{}}";
 
 pub const Net = struct {
     gpa: std.mem.Allocator,
@@ -130,9 +130,9 @@ pub const Net = struct {
         return std.mem.eql(u8, header(head, "Host") orelse return false, want);
     }
 
-    /// guard() for /doc and /rpc: X-Excalibre: 1 (needs a CORS preflight we never grant) plus the bearer token.
+    /// guard() for /doc and /rpc: X-Nanodraw: 1 (needs a CORS preflight we never grant) plus the bearer token.
     fn authOk(self: *Net, head: []const u8) bool {
-        const x = header(head, "X-Excalibre") orelse return false;
+        const x = header(head, "X-Nanodraw") orelse return false;
         if (!std.mem.eql(u8, x, "1")) return false;
         const a = header(head, "Authorization") orelse return false;
         const pre = "Bearer ";
@@ -379,9 +379,9 @@ const Reader = struct {
 };
 
 test "header lookup is case-insensitive and skips the request line" {
-    const head = "GET /x HTTP/1.1\r\nhost: 127.0.0.1:7411\r\nX-Excalibre:  1";
+    const head = "GET /x HTTP/1.1\r\nhost: 127.0.0.1:7411\r\nX-Nanodraw:  1";
     try std.testing.expectEqualStrings("127.0.0.1:7411", header(head, "Host").?);
-    try std.testing.expectEqualStrings("1", header(head, "x-excalibre").?);
+    try std.testing.expectEqualStrings("1", header(head, "x-nanodraw").?);
     try std.testing.expect(header(head, "Origin") == null);
 }
 

@@ -61,7 +61,7 @@ pub fn init(init_: std.process.Init, url: []const u8, mb: *core.Mailbox) !void {
     gpa = init_.gpa;
     mailbox = mb;
     // The window closing must not stop the loop before core's quit flush runs; core's `.exit` ends the process.
-    app = try nanoui.App.create(init_, .{ .name = "Excalibre", .quit_on_last_window_closed = false });
+    app = try nanoui.App.create(init_, .{ .name = "Nanodraw", .quit_on_last_window_closed = false });
     try app.bind(&bridge);
     try app.registerEvent(CanvasEvent);
     try app.registerEvent(ViewEvent);
@@ -108,6 +108,6 @@ pub fn sendCanvas(req: protocol.CanvasRequest) void {
 
 /// Pre-window fatal error (bind failure).
 pub fn fatal(msg: []const u8) void {
-    _ = nanoui.dialog.message(.{ .title = "Excalibre", .detail = msg, .kind = .critical });
+    _ = nanoui.dialog.message(.{ .title = "Nanodraw", .detail = msg, .kind = .critical });
 }
 

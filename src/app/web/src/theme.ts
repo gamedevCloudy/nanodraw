@@ -6,7 +6,7 @@ export const palette = {
 };
 export const canvasBg = { light: "#ffffff", dark: "#121212" };
 
-const KEY = "excalibre.theme";
+const KEY = "nanodraw.theme";
 const system = (): Theme => (matchMedia("(prefers-color-scheme: dark)").matches ? "dark" : "light");
 let theme: Theme = (() => {
   try { const v = localStorage.getItem(KEY); if (v === "light" || v === "dark") return v; } catch { /* storage unavailable: follow the system */ }

@@ -1,6 +1,6 @@
 .{
-    .name = .excalibre,
-    .fingerprint = 0x87d063cf42a9b568,
+    .name = .nanodraw,
+    .fingerprint = 0xf5a8c61401af192f,
     .version = "0.1.0",
     .minimum_zig_version = "0.17.0",
     .dependencies = .{

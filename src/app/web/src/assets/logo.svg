@@ -1,5 +1,5 @@
 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64" width="64" height="64">
-  <!-- Excalibre sword, Gruvbox light palette -->
+  <!-- Nanodraw sword, Gruvbox light palette -->
   <path d="M32 4 L37 10 V40 H27 V10 Z" fill="#a89984" stroke="#3c3836" stroke-width="2.5" stroke-linejoin="round"/>
   <path d="M32 8 V40" stroke="#ebdbb2" stroke-width="2" stroke-linecap="round"/>
   <path d="M15 40 H49 V46 H15 Z" fill="#d79921" stroke="#3c3836" stroke-width="2.5" stroke-linejoin="round"/>
