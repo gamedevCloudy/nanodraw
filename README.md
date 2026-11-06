@@ -2,7 +2,7 @@
 
 A small macOS desktop client for [Excalidraw](https://excalidraw.com): a file-history sidebar, the full Excalidraw canvas, auto-save, and an MCP server so AI agents can draw.
 
-nanodraw is a demo app for [NanoUI](https://github.com/justrach/nanoui), the Zig UI library it is built on.
+nanodraw is a small, lightweight native app ("nano") built on [NanoUI](https://github.com/justrach/nanoui), the Zig UI library.
 
 ## Install
 
