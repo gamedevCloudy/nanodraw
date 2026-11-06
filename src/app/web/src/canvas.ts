@@ -31,6 +31,9 @@ let status: Status = { s: "idle" };
 const subs = new Set<() => void>();
 const setStatus = (s: Status) => { status = s; subs.forEach((f) => f()); };
 export const getStatus = () => status;
+// Count of agent-applied changes, for the sidebar's "Agent edited" pulse.
+let agentEdits = 0;
+export const getAgentEdits = () => agentEdits;
 export const subscribe = (f: () => void) => (subs.add(f), () => { subs.delete(f); });
 
 export const uiOptions = { canvasActions: { loadScene: false, saveToActiveFile: false } };
@@ -130,6 +133,7 @@ async function run({ request_id: rid, op }: CanvasRequest) {
       const { elements, warnings } = resolvePatch(api.getSceneElementsIncludingDeleted(), patch);
       api.updateScene({ elements, captureUpdate: CaptureUpdateAction.IMMEDIATELY });
       if (warnings.length) console.warn("apply warnings", warnings);
+      agentEdits++; subs.forEach((f) => f());
     } else if ("get_scene" in op) {
       await putRpc(rid, serializeAsJSON(api.getSceneElements(), api.getAppState(), api.getFiles(), "local"));
     } else if ("screenshot" in op) {
