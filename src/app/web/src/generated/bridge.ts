@@ -5,7 +5,7 @@ export interface CanvasRequest { request_id: number; op: CanvasOp }
 export interface CanvasReply { request_id: number; err: string | null }
 export interface Row { path: string; label: string; active: boolean; err?: string | null; count: number; opened_at: number; dir?: string | null }
 export interface Section { header: string; rows: Row[] }
-export interface ViewModel { title: string; enabled: boolean; banner?: string | null; sections: Section[] }
+export interface ViewModel { title: string; enabled: boolean; agents: number; banner?: string | null; sections: Section[] }
 export interface Bridge {
   onViewModel(cb: (v: ViewModel) => void): void;
   setTitle(title: string): void;

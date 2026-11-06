@@ -140,6 +140,7 @@ pub const Core = struct {
             _ = self.conns.remove(id);
             self.push(.{ .ws_close = id });
         }
+        if (stale.items.len > 0) self.publish() catch {};
         if (self.quit_at) |q| if (now_ms >= q) {
             self.quit_at = null;
             self.push(.exit);
@@ -203,7 +204,7 @@ pub const Core = struct {
         const a = self.view_arenas[self.vi].allocator();
         const rows = try self.store.list(a);
         const active = self.docs.get(self.active) orelse Doc{ .path = null, .row = null };
-        const vm = try view.build(a, rows, active, self.err, self.canvas_ready, std.Io.Clock.real.now(store_mod.io()).toSeconds());
+        const vm = try view.build(a, rows, active, self.err, self.canvas_ready, self.conns.count(), std.Io.Clock.real.now(store_mod.io()).toSeconds());
         try self.effects.append(self.gpa, .{ .view = vm });
     }
 
@@ -347,11 +348,14 @@ pub const Core = struct {
                 }
                 r.out.done.set();
             },
-            .mcp_open => |id| try self.conns.put(self.gpa, id, nowMs()),
+            .mcp_open => |id| {
+                try self.conns.put(self.gpa, id, nowMs());
+                try self.publish();
+            },
             .mcp_pong => |id| if (self.conns.getPtr(id)) |t| {
                 t.* = nowMs(); // a pong after close must not resurrect the conn
             },
-            .mcp_closed => |id| _ = self.conns.remove(id),
+            .mcp_closed => |id| if (self.conns.remove(id)) try self.publish(),
             .mcp_call => |m| {
                 const call = m.call;
                 if (!self.canvas_ready) return self.rejectMcp(m.conn, call, "canvas not ready");
@@ -648,4 +652,29 @@ test "core: tick pings, closes silent conns, quit deadline" {
         exited = true;
     };
     try std.testing.expect(exited);
+}
+
+fn lastAgents(c: *Core) ?u32 {
+    var n: ?u32 = null;
+    for (c.takeEffects()) |e| if (e == .view) {
+        n = e.view.agents;
+    };
+    return n;
+}
+
+test "core: view carries the live agent count on open, close and silent drop" {
+    var f: Fixture = undefined;
+    try f.init();
+    defer f.deinit();
+    const c = &f.core;
+    c.handle(.{ .mcp_open = 1 });
+    try std.testing.expectEqual(@as(?u32, 1), lastAgents(c));
+    c.handle(.{ .mcp_open = 2 });
+    try std.testing.expectEqual(@as(?u32, 2), lastAgents(c));
+    c.handle(.{ .mcp_closed = 1 });
+    try std.testing.expectEqual(@as(?u32, 1), lastAgents(c));
+    c.handle(.{ .mcp_closed = 1 }); // already gone: no re-render
+    try std.testing.expectEqual(@as(?u32, null), lastAgents(c));
+    c.tick(Core.nowMs() + 20_000); // conn 2 went silent
+    try std.testing.expectEqual(@as(?u32, 0), lastAgents(c));
 }

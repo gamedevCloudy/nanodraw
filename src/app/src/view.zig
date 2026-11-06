@@ -13,12 +13,12 @@ const Path = store.Path;
 const FileRecord = store.FileRecord;
 const Doc = store.Doc;
 
-pub const ViewModel = struct { title: []const u8, enabled: bool, banner: ?[]const u8, sections: []Section }; // sections empty -> "No files yet"
+pub const ViewModel = struct { title: []const u8, enabled: bool, agents: u32, banner: ?[]const u8, sections: []Section }; // sections empty -> "No files yet"
 pub const Section = struct { header: []const u8, rows: []Row };
 pub const Row = struct { path: Path, label: []const u8, active: bool, err: ?[]const u8, count: u32, opened_at: i64, dir: ?[]const u8 = null }; // dir: parent folder name, only when another row shares the basename
 
 /// All allocations come from `gpa` (core passes an arena); row paths/labels borrow from `rows`/`active`/`err`.
-pub fn build(gpa: Allocator, rows: []const FileRecord, active: Doc, err: ?core.UiError, enabled: bool, now: i64) !ViewModel {
+pub fn build(gpa: Allocator, rows: []const FileRecord, active: Doc, err: ?core.UiError, enabled: bool, agents: u32, now: i64) !ViewModel {
     const sections = try groupByDay(gpa, rows, now, localDay);
     for (sections) |s| for (s.rows) |*r| {
         r.active = if (active.path) |p| std.mem.eql(u8, p, r.path) else false;
@@ -29,6 +29,7 @@ pub fn build(gpa: Allocator, rows: []const FileRecord, active: Doc, err: ?core.U
     return .{
         .title = if (active.path) |p| std.fs.path.basename(p) else "Untitled",
         .enabled = enabled,
+        .agents = agents,
         .banner = if (err) |e| (if (e.row == null) e.msg else null) else null,
         .sections = sections,
     };
@@ -149,12 +150,13 @@ test "build: active row, row error, banner, title" {
     defer arena.deinit();
     const now = std.Io.Clock.real.now(store.io()).toSeconds();
     const rows = [_]FileRecord{.{ .id = 1, .path = "/d/a.excalidraw", .opened_at = now, .element_count = 0 }};
-    const vm = try build(arena.allocator(), &rows, .{ .path = "/d/a.excalidraw", .row = "/d/a.excalidraw" }, .{ .row = "/d/a.excalidraw", .msg = "disk full" }, true, now);
+    const vm = try build(arena.allocator(), &rows, .{ .path = "/d/a.excalidraw", .row = "/d/a.excalidraw" }, .{ .row = "/d/a.excalidraw", .msg = "disk full" }, true, 3, now);
+    try std.testing.expectEqual(@as(u32, 3), vm.agents);
     try std.testing.expectEqualStrings("a.excalidraw", vm.title);
     try std.testing.expect(vm.sections[0].rows[0].active);
     try std.testing.expectEqualStrings("disk full", vm.sections[0].rows[0].err.?);
     try std.testing.expect(vm.banner == null);
-    const vm2 = try build(arena.allocator(), &.{}, .{ .path = null, .row = null }, .{ .row = null, .msg = "boom" }, false, now);
+    const vm2 = try build(arena.allocator(), &.{}, .{ .path = null, .row = null }, .{ .row = null, .msg = "boom" }, false, 0, now);
     try std.testing.expectEqualStrings("Untitled", vm2.title);
     try std.testing.expectEqualStrings("boom", vm2.banner.?);
 }

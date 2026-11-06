@@ -69,6 +69,7 @@ export function Sidebar() {
           </div>
         ))}
       </div>
+      {!!vm?.agents && <div style={{ flex: "none", fontSize: 11, color: C.muted }}>{vm.agents} agent{vm.agents === 1 ? "" : "s"} connected</div>}
       <div style={{ flex: "none", fontSize: 11, color: st.s === "failed" ? C.err : C.muted }}>
         {st.s === "saving" ? "Saving…" : st.s === "failed" ? "Couldn't save · retrying" : st.s === "saved" ? `Saved · ${ago(st.at / 1000)}` : ""}
       </div>
