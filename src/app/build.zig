@@ -2,7 +2,7 @@ const std = @import("std");
 
 // Copies web/dist next to a generated assets.zig that @embedFile's every file.
 const gen_script =
-    \\set -e; out="$1"; src="$2"; mkdir -p "$out/files"; cp -R "$src/." "$out/files/"
+    \\set -e; out="$1"; src="$2"; rm -rf "$out/files"; mkdir -p "$out/files"; cp -R "$src/." "$out/files/"
     \\{ printf 'pub const File = struct { path: []const u8, data: []const u8 };\npub const files = [_]File{\n'
     \\  (cd "$out/files" && find . -type f | sed 's|^\./||' | while IFS= read -r f; do
     \\    printf '    .{ .path = "/%s", .data = @embedFile("files/%s") },\n' "$f" "$f"; done)
