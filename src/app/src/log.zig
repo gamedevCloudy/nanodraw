@@ -11,11 +11,12 @@ fn io() std.Io {
     return std.Io.Threaded.global_single_threaded.io();
 }
 
-/// Call once at boot, after the logs/ dir exists (Store.open creates it). Before this, log lines are dropped.
+/// Call once at boot, before anything else logs; creates logs/ so a fresh install logs from the first line. Before this, log lines are dropped.
 pub fn init(app_data: []const u8) void {
     if (std.c.getenv("LOG_LEVEL")) |v| min_level = std.meta.stringToEnum(std.log.Level, std.mem.span(v)) orelse .info;
     var buf: [std.Io.Dir.max_path_bytes]u8 = undefined;
     const p = std.fmt.bufPrint(&buf, "{s}/logs/app.log", .{app_data}) catch return;
+    std.Io.Dir.cwd().createDirPath(io(), std.fs.path.dirname(p).?) catch return;
     const f = std.Io.Dir.createFileAbsolute(io(), p, .{ .truncate = false }) catch return;
     pos = f.length(io()) catch 0;
     file = f;
@@ -66,7 +67,6 @@ pub fn logFn(
 test "logFn writes an escaped JSON line" {
     var tmp = std.testing.tmpDir(.{});
     defer tmp.cleanup();
-    try tmp.dir.createDirPath(std.testing.io, "logs");
     const root = try tmp.dir.realPathFileAlloc(std.testing.io, ".", std.testing.allocator);
     defer std.testing.allocator.free(root);
     init(root);

@@ -63,11 +63,9 @@ pub const Store = struct {
     pub fn open(gpa: Allocator, app_data: []const u8) !Store {
         const dir = try gpa.dupe(u8, app_data);
         errdefer gpa.free(dir);
-        inline for (.{ "drafts", "logs" }) |sub| {
-            const p = try std.fs.path.join(gpa, &.{ dir, sub });
-            defer gpa.free(p);
-            try std.Io.Dir.cwd().createDirPath(io(), p);
-        }
+        const drafts = try std.fs.path.join(gpa, &.{ dir, "drafts" });
+        defer gpa.free(drafts);
+        try std.Io.Dir.cwd().createDirPath(io(), drafts);
         const db_path = try std.fmt.allocPrint(gpa, "{s}/history.db\x00", .{dir});
         defer gpa.free(db_path);
         var db: ?*c.sqlite3 = null;
