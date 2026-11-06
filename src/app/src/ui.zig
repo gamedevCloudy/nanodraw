@@ -88,8 +88,10 @@ pub fn run() void {
     app.run() catch |e| std.log.err("ui run: {s}", .{@errorName(e)});
     if (app.flags.generate_dir != null or app.flags.snapshot != null) std.process.exit(0); // nanoui dev flags: run() returned at once
     // Cmd+Q path: windows are still alive, so core can still flush through the canvas before its `.exit`.
+    // Keep pumping the run loop: Event.emit and the page's replies travel through the main queue, which a
+    // sleeping main thread never drains (the flush would always hit core's grace timeout).
     mailbox.post(.quit);
-    while (true) std.Io.sleep(@import("store.zig").io(), .fromSeconds(1), .awake) catch {};
+    while (true) nanoui.runFor(1);
 }
 
 /// Close button / Cmd+W: keep the window so core's quit flush goes through the canvas; core's `.exit` ends the process.
