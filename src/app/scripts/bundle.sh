@@ -32,5 +32,7 @@ cat > "$app/Contents/Info.plist" <<P
   <key>NSAppTransportSecurity</key><dict><key>NSAllowsLocalNetworking</key><true/></dict>
 </dict></plist>
 P
+npm ci --prefix mcp --silent
+bun build --compile --target=bun-darwin-arm64 mcp/src/index.ts --outfile "$app/Contents/MacOS/nanodraw-mcp" && rm -f .*.bun-build # bun leaves its temp file in cwd
 codesign --force --deep --sign - "$app"
 echo "$app"

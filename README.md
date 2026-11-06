@@ -19,11 +19,23 @@ xattr -dr com.apple.quarantine /Applications/Nanodraw.app
 
 ## MCP
 
-Build the sidecar (`cd src/app/mcp && npm ci && npm run build`) and point your MCP client at `node src/app/mcp/dist/index.js`. Tools: `add_elements`, `apply_scene`, `get_scene`, `screenshot`, `save_scene`. Nanodraw must be running; the sidecar talks to it on `127.0.0.1:7411` (`EXCALIDRAW_WS_PORT`).
+The app ships the MCP sidecar as a standalone binary; no Node needed. Point your MCP client at it:
+
+```json
+{ "mcpServers": { "nanodraw": { "command": "/Applications/Nanodraw.app/Contents/MacOS/nanodraw-mcp" } } }
+```
+
+```sh
+claude mcp add nanodraw -- /Applications/Nanodraw.app/Contents/MacOS/nanodraw-mcp
+```
+
+Tools: `add_elements`, `apply_scene`, `get_scene`, `screenshot`, `save_scene`. Nanodraw must be running; the sidecar talks to it on `127.0.0.1:7411` (`EXCALIDRAW_WS_PORT`).
+
+From source: `cd src/app/mcp && npm ci && npm run build`, then use `node src/app/mcp/dist/index.js` as the command.
 
 ## Develop
 
-Needs Zig 0.17 and Node. See `SRS.md` and `DESIGN.md`.
+Needs Zig 0.17, Node, and Bun (`bundle.sh` compiles the MCP sidecar with it). See `SRS.md` and `DESIGN.md`.
 
 ```sh
 cd src/app && zig build test      # Zig tests
