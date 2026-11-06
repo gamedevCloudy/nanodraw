@@ -1,6 +1,6 @@
 //! The ONLY file that imports NanoUI. One webview window (NanoUI windows are native view OR webview, never a split):
 //! the page renders the sidebar and the canvas, served by our loopback server.
-//! No close veto exists in NanoUI: closing the window runs `on_close` after the fact (see `onClose`).
+//! The close button and Cmd+W are vetoed (`shouldClose`) so core's quit flush still reaches the canvas.
 const std = @import("std");
 const builtin = @import("builtin");
 const nanoui = @import("nanoui");
@@ -69,6 +69,7 @@ pub fn init(init_: std.process.Init, url: []const u8, mb: *core.Mailbox) !void {
         .title = "Untitled",
         .width = 1300,
         .height = 800,
+        .should_close = .{ .ctx = &bridge, .func = shouldClose },
         .on_close = .{ .ctx = &bridge, .func = onClose },
         .content = .{ .page = .{ .url = url, .inspectable = builtin.mode == .debug } },
     });
@@ -82,8 +83,14 @@ pub fn run() void {
     while (true) std.Io.sleep(@import("store.zig").io(), .fromSeconds(1), .awake) catch {};
 }
 
-/// No veto in NanoUI: the window is already closing. Core still gets `.quit` and exits after its grace period;
-/// edits newer than the canvas autosave may be lost on a window-button close (Cmd+Q is fully flushed).
+/// Close button / Cmd+W: keep the window so core's quit flush goes through the canvas; core's `.exit` ends the process.
+fn shouldClose(_: *anyopaque, _: *nanoui.Window) bool {
+    mailbox.post(.quit);
+    return false;
+}
+
+/// Unvetoed close (the page's `nanoui.window.close()`): the window is already closing, so edits newer than the
+/// canvas autosave may be lost. Core still gets `.quit` and exits after its grace period.
 fn onClose(_: *anyopaque, w: *nanoui.Window) void {
     if (canvas == w) canvas = null;
     mailbox.post(.quit);
