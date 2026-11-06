@@ -28,6 +28,24 @@ pub fn init(app_data: []const u8) void {
     pos = 0;
 }
 
+/// Both sessions as one text, previous first, for "Copy logs". Caller frees.
+pub fn readAll(gpa: std.mem.Allocator) ![]u8 {
+    const d = try std.Io.Dir.openDirAbsolute(io(), dir, .{});
+    defer d.close(io());
+    var out: std.ArrayList(u8) = .empty;
+    errdefer out.deinit(gpa);
+    for ([_][]const u8{ "app.prev.log", "app.log" }, [_][]const u8{ "previous session", "current session" }) |name, label| {
+        try out.print(gpa, "===== {s} ({s}) =====\n", .{ label, name });
+        const bytes = d.readFileAlloc(io(), name, gpa, .limited(max_bytes + 16 * 1024)) catch |e| switch (e) {
+            error.FileNotFound => try gpa.dupe(u8, "(none)\n"),
+            else => return e,
+        };
+        defer gpa.free(bytes);
+        try out.appendSlice(gpa, bytes);
+    }
+    return out.toOwnedSlice(gpa);
+}
+
 pub fn logFn(
     comptime level: std.log.Level,
     comptime scope: @TypeOf(.enum_literal),
@@ -95,7 +113,7 @@ test "logFn writes an escaped JSON line" {
     try std.testing.expectEqualStrings("core", parsed.value.object.get("scope").?.string);
 }
 
-test "init moves app.log to app.prev.log, replacing an older one" {
+test "init moves app.log to app.prev.log, replacing an older one; readAll puts the previous session first" {
     const gpa = std.testing.allocator;
     var tmp = std.testing.tmpDir(.{});
     defer tmp.cleanup();
@@ -112,6 +130,9 @@ test "init moves app.log to app.prev.log, replacing an older one" {
     const prev = try tmp.dir.readFileAlloc(std.testing.io, "logs/app.prev.log", gpa, .limited(64));
     defer gpa.free(prev);
     try std.testing.expectEqualStrings("session 1\n", prev);
+    const all = try readAll(gpa);
+    defer gpa.free(all);
+    try std.testing.expectEqualStrings("===== previous session (app.prev.log) =====\nsession 1\n===== current session (app.log) =====\n", all);
 }
 
 test "logging stops at the size cap after one marker line" {

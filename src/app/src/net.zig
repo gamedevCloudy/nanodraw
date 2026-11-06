@@ -1,4 +1,4 @@
-//! Loopback listener: embedded assets, /doc/:id, /rpc/:id, and the /mcp WebSocket.
+//! Loopback listener: embedded assets, /doc/:id, /rpc/:id, /logs, and the /mcp WebSocket.
 //! Hand-rolled HTTP/1.1 + RFC 6455 over std.Io.net (std.http moves between Zig releases).
 //! shortcut: one request per connection (Connection: close), net.mu held across WS writes; upgrade if a slow peer matters.
 const std = @import("std");
@@ -6,6 +6,7 @@ const core = @import("core.zig");
 const protocol = @import("protocol.zig");
 const store = @import("store.zig");
 const assets = @import("assets");
+const applog = @import("log.zig");
 
 const log = std.log.scoped(.net);
 const netio = std.Io.net;
@@ -116,6 +117,13 @@ pub const Net = struct {
             if (!self.authOk(head)) return respond(r.stream, 403, "text/plain", "forbidden");
             return self.data(r, head, method, path);
         }
+        if (std.mem.eql(u8, path, "/logs")) {
+            if (!self.authOk(head)) return respond(r.stream, 403, "text/plain", "forbidden");
+            if (!std.mem.eql(u8, method, "GET")) return respond(r.stream, 405, "text/plain", "method not allowed");
+            const text = applog.readAll(self.gpa) catch |e| return respond(r.stream, 500, "text/plain", @errorName(e));
+            defer self.gpa.free(text);
+            return respond(r.stream, 200, "text/plain; charset=utf-8", text);
+        }
         if (!std.mem.eql(u8, method, "GET")) return respond(r.stream, 405, "text/plain", "method not allowed");
         const want = if (std.mem.eql(u8, path, "/")) "/index.html" else path;
         for (assets.files) |f| {
@@ -131,7 +139,7 @@ pub const Net = struct {
         return std.mem.eql(u8, header(head, "Host") orelse return false, want);
     }
 
-    /// guard() for /doc and /rpc: X-Nanodraw: 1 (needs a CORS preflight we never grant) plus the bearer token.
+    /// guard() for /doc, /rpc and /logs: X-Nanodraw: 1 (needs a CORS preflight we never grant) plus the bearer token.
     fn authOk(self: *Net, head: []const u8) bool {
         const x = header(head, "X-Nanodraw") orelse return false;
         if (!std.mem.eql(u8, x, "1")) return false;
@@ -402,4 +410,43 @@ test "shared WS fixture: every ws-calls.jsonl line parses" {
         n += 1;
     }
     try std.testing.expect(n >= 4);
+}
+
+/// One request over a real socket: the kernel queues the client side, then the test thread serves it.
+fn testRequest(n: *Net, req: []const u8, out: []u8) ![]const u8 {
+    const addr: netio.IpAddress = .{ .ip4 = .loopback(n.port) };
+    const c = try addr.connect(io(), .{ .mode = .stream });
+    defer c.close(io());
+    try writeAll(c, req);
+    n.handleConn(try n.server.accept(io()));
+    var got: usize = 0;
+    while (true) {
+        const k = try readSome(c, out[got..]);
+        if (k == 0) return out[0..got];
+        got += k;
+    }
+}
+
+test "/logs requires the bearer token and returns both sessions" {
+    const gpa = std.testing.allocator;
+    var tmp = std.testing.tmpDir(.{});
+    defer tmp.cleanup();
+    const root = try tmp.dir.realPathFileAlloc(std.testing.io, ".", gpa);
+    defer gpa.free(root);
+    applog.init(root);
+    var mb = core.Mailbox.init(gpa);
+    var n = try Net.listen(gpa, 0, &mb);
+    defer n.server.deinit(io());
+    n.port = n.server.socket.address.getPort();
+    var buf: [4096]u8 = undefined;
+    var req: [256]u8 = undefined;
+
+    const host = try std.fmt.bufPrint(&req, "GET /logs HTTP/1.1\r\nHost: 127.0.0.1:{d}\r\n\r\n", .{n.port});
+    try std.testing.expect(std.mem.startsWith(u8, try testRequest(&n, host, &buf), "HTTP/1.1 403"));
+    const wrong = try std.fmt.bufPrint(&req, "GET /logs HTTP/1.1\r\nHost: 127.0.0.1:{d}\r\nX-Nanodraw: 1\r\nAuthorization: Bearer nope\r\n\r\n", .{n.port});
+    try std.testing.expect(std.mem.startsWith(u8, try testRequest(&n, wrong, &buf), "HTTP/1.1 403"));
+    const ok = try std.fmt.bufPrint(&req, "GET /logs HTTP/1.1\r\nHost: 127.0.0.1:{d}\r\nX-Nanodraw: 1\r\nAuthorization: Bearer {s}\r\n\r\n", .{ n.port, n.token });
+    const resp = try testRequest(&n, ok, &buf);
+    try std.testing.expect(std.mem.startsWith(u8, resp, "HTTP/1.1 200"));
+    try std.testing.expect(std.mem.indexOf(u8, resp, "===== previous session (app.prev.log) =====\n(none)\n===== current session (app.log) =====\n") != null);
 }

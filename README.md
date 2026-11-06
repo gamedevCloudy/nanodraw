@@ -34,6 +34,8 @@ cd src/app && zig build           # builds the web bundle and the app
 
 Drafts and history live in `~/Library/Application Support/nanodraw`.
 
+Logs live in `~/Library/Application Support/nanodraw/logs` (`app.log` for this session, `app.prev.log` for the one before). To report a bug, choose **Copy logs** in the canvas menu or on the sidebar's error banner, then paste.
+
 ## Credits
 
 Icon: abstract shape by Wilson Joseph from [Noun Project](https://thenounproject.com/browse/icons/term/abstract-shape/) (CC BY 3.0), modified.
