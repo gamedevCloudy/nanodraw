@@ -6,17 +6,19 @@ export const palette = {
 };
 export const canvasBg = { light: "#ffffff", dark: "#121212" };
 
+// Storage can throw (disabled, sandboxed); a lost preference must never break the UI.
+export const readPref = (k: string): string | null => { try { return localStorage.getItem(k); } catch { return null; } };
+export const writePref = (k: string, v: string): void => { try { localStorage.setItem(k, v); } catch { /* not persisted */ } };
+
 const KEY = "excalibre.theme";
 const system = (): Theme => (matchMedia("(prefers-color-scheme: dark)").matches ? "dark" : "light");
-let theme: Theme = (() => {
-  try { const v = localStorage.getItem(KEY); if (v === "light" || v === "dark") return v; } catch { /* storage unavailable: follow the system */ }
-  return system();
-})();
+const saved = readPref(KEY);
+let theme: Theme = saved === "light" || saved === "dark" ? saved : system();
 const subs = new Set<() => void>();
 export const getTheme = () => theme;
 export const subscribeTheme = (f: () => void) => (subs.add(f), () => { subs.delete(f); });
 export function toggleTheme(): void {
   theme = theme === "dark" ? "light" : "dark";
-  try { localStorage.setItem(KEY, theme); } catch { /* keep the in-memory choice */ }
+  writePref(KEY, theme);
   subs.forEach((f) => f());
 }
