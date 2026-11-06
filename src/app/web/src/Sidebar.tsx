@@ -1,6 +1,6 @@
 import { useEffect, useState, useSyncExternalStore } from "react";
 import logo from "./assets/logo.svg";
-import { getStatus, subscribe } from "./canvas";
+import { getAgentEdits, getStatus, subscribe } from "./canvas";
 import { getTheme, palette, subscribeTheme, toggleTheme } from "./theme";
 import { bridge, type ViewModel } from "./generated/bridge";
 
@@ -24,6 +24,9 @@ export function Sidebar() {
   const [dismissed, setDismissed] = useState<string | null>(null);
   useEffect(() => bridge.onViewModel((v) => { setVm(v); bridge.setTitle(v.title); }), []);
   const st = useSyncExternalStore(subscribe, getStatus);
+  const edits = useSyncExternalStore(subscribe, getAgentEdits);
+  const [pulse, setPulse] = useState(false);
+  useEffect(() => { if (!edits) return; setPulse(true); const t = setTimeout(() => setPulse(false), 2000); return () => clearTimeout(t); }, [edits]);
   const [, tick] = useState(0);
   useEffect(() => { const t = setInterval(() => tick((n) => n + 1), 30000); return () => clearInterval(t); }, []);
   const theme = useSyncExternalStore(subscribeTheme, getTheme);
@@ -71,6 +74,7 @@ export function Sidebar() {
       </div>
       {!!vm?.agents && <div style={{ flex: "none", fontSize: 11, color: C.muted }}>{vm.agents} agent{vm.agents === 1 ? "" : "s"} connected</div>}
       <div style={{ flex: "none", fontSize: 11, color: st.s === "failed" ? C.err : C.muted }}>
+        {pulse && <span style={{ color: C.accent, marginRight: 6 }}>Agent edited</span>}
         {st.s === "saving" ? "Saving…" : st.s === "failed" ? "Couldn't save · retrying" : st.s === "saved" ? `Saved · ${ago(st.at / 1000)}` : ""}
       </div>
       </>}
