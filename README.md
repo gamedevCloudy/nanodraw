@@ -33,3 +33,7 @@ cd src/app && zig build           # builds the web bundle and the app
 ```
 
 Drafts and history live in `~/Library/Application Support/nanodraw`.
+
+## Credits
+
+Icon: abstract shape by Wilson Joseph from [Noun Project](https://thenounproject.com/browse/icons/term/abstract-shape/) (CC BY 3.0), modified.
