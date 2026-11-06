@@ -137,11 +137,13 @@ pub const Core = struct {
             if (now_ms - e.value_ptr.* > silent_ms) stale.append(self.gpa, e.key_ptr.*) catch return;
         }
         for (stale.items) |id| {
+            log.info("mcp conn {d} silent, closing", .{id});
             _ = self.conns.remove(id);
             self.push(.{ .ws_close = id });
         }
         if (stale.items.len > 0) self.publish() catch {};
         if (self.quit_at) |q| if (now_ms >= q) {
+            log.warn("quit: flush did not finish in time", .{});
             self.quit_at = null;
             self.push(.exit);
         };
@@ -190,7 +192,9 @@ pub const Core = struct {
         return rid;
     }
 
+    /// Every error the sidebar shows passes through here, so it is logged here.
     fn setErr(self: *Core, row: ?Path, msg: []const u8) !void {
+        if (row) |p| log.warn("row error {s}: {s}", .{ p, msg }) else log.warn("banner: {s}", .{msg});
         const a = self.arena.allocator();
         self.err = .{ .row = if (row) |r| try a.dupe(u8, r) else null, .msg = try a.dupe(u8, msg) };
     }
@@ -223,9 +227,13 @@ pub const Core = struct {
     fn route(self: *Core, p: Pending, err: ?[]const u8) !void {
         defer self.freePending(p);
         switch (p.origin) {
-            .quit => self.push(.exit),
+            .quit => {
+                if (err) |e| log.warn("quit: flush failed: {s}", .{e}) else log.info("quit: flushed", .{});
+                self.push(.exit);
+            },
             .user => if (err) |m| try self.setErr(null, m),
             .mcp => |m| {
+                if (err) |e| log.warn("mcp conn {d} {s}: {s}", .{ m.conn, @tagName(m.method), e }) else log.info("mcp conn {d} {s}: ok", .{ m.conn, @tagName(m.method) });
                 if (!self.conns.contains(m.conn)) return;
                 const frame = blk: {
                     if (err) |e| break :blk try protocol.mcpErr(self.gpa, m.ws_id, e);
@@ -254,6 +262,7 @@ pub const Core = struct {
     fn rejectMcp(self: *Core, conn: ConnId, call: McpCall, msg: []const u8) !void {
         defer self.gpa.free(call.ws_id);
         defer self.gpa.free(call.params);
+        log.warn("mcp conn {d} {s} rejected: {s}", .{ conn, @tagName(call.method), msg });
         self.sendFrame(conn, try protocol.mcpErr(self.gpa, call.ws_id, msg));
     }
 
@@ -261,6 +270,7 @@ pub const Core = struct {
         switch (ev) {
             .new_file => {
                 if (!self.canvas_ready) return self.notReady();
+                log.info("file new", .{});
                 const id = try self.issue(.{ .path = null, .row = null });
                 // flush materializes Untitled-N + its row now (FR-F1)
                 _ = self.submit(.{ .load = id }, .user, null) catch |e| return self.submitFailed(e);
@@ -273,12 +283,14 @@ pub const Core = struct {
                     try self.store.touch(p, std.Io.Clock.real.now(store_mod.io()).toSeconds());
                     return self.publish();
                 }
+                log.info("file open: {s}", .{p});
                 const path = try self.arena.allocator().dupe(u8, p);
                 const id = try self.issue(.{ .path = path, .row = path });
                 _ = self.submit(.{ .load = id }, .user, null) catch |e| return self.submitFailed(e);
             },
             .save_as => |p| {
                 if (!self.canvas_ready) return self.notReady();
+                log.info("file save-as: {s}", .{p});
                 const d = self.docs.getPtr(self.active).?;
                 d.path = try self.arena.allocator().dupe(u8, p);
                 _ = self.submit(.{ .flush = self.active }, .user, null) catch |e| {
@@ -287,10 +299,12 @@ pub const Core = struct {
                 };
             },
             .quit => {
+                log.info("quit: flushing doc {d}", .{self.active});
                 self.quit_at = nowMs() + quit_grace_ms;
                 if (self.submit(.{ .flush = self.active }, .quit, null)) |_| {} else |_| self.push(.exit);
             },
             .canvas_ready => {
+                log.info("canvas ready ({d} calls in flight)", .{self.pending.count()});
                 for (self.pending.values()) |p| try self.route(p, "canvas reloaded");
                 self.pending.clearRetainingCapacity();
                 self.canvas_ready = true;
@@ -304,6 +318,7 @@ pub const Core = struct {
                     return;
                 };
                 const p = kv.value;
+                log.debug("canvas {s} #{d}: {s}", .{ @tagName(p.op), r.request_id, r.err orelse "ok" });
                 if (r.err == null) switch (p.op) {
                     .load => |id| {
                         self.active = id;
@@ -349,13 +364,17 @@ pub const Core = struct {
                 r.out.done.set();
             },
             .mcp_open => |id| {
+                log.info("mcp conn {d} open", .{id});
                 try self.conns.put(self.gpa, id, nowMs());
                 try self.publish();
             },
             .mcp_pong => |id| if (self.conns.getPtr(id)) |t| {
                 t.* = nowMs(); // a pong after close must not resurrect the conn
             },
-            .mcp_closed => |id| if (self.conns.remove(id)) try self.publish(),
+            .mcp_closed => |id| if (self.conns.remove(id)) {
+                log.info("mcp conn {d} closed", .{id});
+                try self.publish();
+            },
             .mcp_call => |m| {
                 const call = m.call;
                 if (!self.canvas_ready) return self.rejectMcp(m.conn, call, "canvas not ready");
@@ -366,9 +385,10 @@ pub const Core = struct {
                     .save => .{ .flush = self.active },
                 };
                 const origin = Origin{ .mcp = .{ .conn = m.conn, .ws_id = @constCast(call.ws_id), .method = call.method } };
-                _ = self.submit(op, origin, @constCast(call.params)) catch |e| {
+                const rid = self.submit(op, origin, @constCast(call.params)) catch |e| {
                     return self.rejectMcp(m.conn, call, if (e == error.Busy) "busy" else "out of memory");
                 };
+                log.debug("mcp conn {d} {s} -> canvas #{d}", .{ m.conn, @tagName(call.method), rid });
             },
         }
     }
@@ -379,8 +399,12 @@ pub const Core = struct {
     }
 
     fn writeDoc(self: *Core, id: DocId, bytes: []const u8, count: u32) !WriteOutcome {
-        const d = self.docs.getPtr(id) orelse return .unknown_doc;
+        const d = self.docs.getPtr(id) orelse {
+            log.warn("write for unknown doc {d}", .{id});
+            return .unknown_doc;
+        };
         const written = self.store.write(d.*, bytes, count, std.Io.Clock.real.now(store_mod.io()).toSeconds()) catch |e| {
+            log.err("save {s} failed: {s}", .{ d.path orelse "(new draft)", @errorName(e) });
             d.path = d.row;
             try self.setErr(d.row, @errorName(e));
             try self.publish();
@@ -388,10 +412,16 @@ pub const Core = struct {
         };
         defer self.gpa.free(written);
         const path = try self.arena.allocator().dupe(u8, written);
+        if (d.row != null and std.mem.eql(u8, d.row.?, path)) {
+            log.debug("saved {s}: {d} elements, {d} bytes", .{ path, count, bytes.len });
+        } else log.info("file saved as {s}", .{path}); // a new draft or a save-as target
         d.path = path;
         d.row = path;
         if (self.err) |e| if (e.row) |r| {
-            if (std.mem.eql(u8, r, path)) self.err = null;
+            if (std.mem.eql(u8, r, path)) {
+                log.info("save ok again: {s}", .{path});
+                self.err = null;
+            }
         };
         try self.publish();
         return .ok;
@@ -437,6 +467,7 @@ const Fixture = struct {
 
     fn init(f: *Fixture) !void {
         const gpa = std.testing.allocator;
+        std.testing.log_level = .err; // the error paths under test log warnings by design
         f.tmp = std.testing.tmpDir(.{});
         const root = try f.tmp.dir.realPathFileAlloc(std.testing.io, ".", gpa);
         defer gpa.free(root);

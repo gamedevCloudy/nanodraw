@@ -7,6 +7,7 @@ const nanoui = @import("nanoui");
 const core = @import("core.zig");
 const protocol = @import("protocol.zig");
 const view = @import("view.zig");
+const log = @import("log.zig");
 
 var gpa: std.mem.Allocator = undefined;
 var mailbox: *core.Mailbox = undefined;
@@ -52,6 +53,14 @@ const Bridge = struct {
 
     pub fn openPath(_: *Bridge, path: []const u8) void {
         mailbox.post(.{ .open = gpa.dupe(u8, path) catch return });
+    }
+
+    /// "Copy logs" fallback when WebKit refuses the page's clipboard write: the bridge only rings, the bytes stay native.
+    pub fn copyLogs(_: *Bridge) void {
+        const text = log.readAll(gpa) catch |e| return std.log.err("copy logs: {s}", .{@errorName(e)});
+        defer gpa.free(text);
+        nanoui.clipboard.writeText(text);
+        std.log.info("logs copied (native clipboard)", .{});
     }
 };
 var bridge: Bridge = .{};

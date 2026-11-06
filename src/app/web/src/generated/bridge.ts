@@ -12,6 +12,7 @@ export interface Bridge {
   newFile(): void;
   openFile(): void;
   openPath(path: string): void;
+  copyLogs(): void;
   onCanvasRequest(cb: (r: CanvasRequest) => void): void;
   canvasReply(r: CanvasReply): void;
   canvasReady(): void;
@@ -45,4 +46,5 @@ export const bridge: Bridge = {
   newFile: () => fire("newFile"),
   openFile: () => fire("openFile"),
   openPath: (p) => fire("openPath", p),
+  copyLogs: () => fire("copyLogs"),
 };

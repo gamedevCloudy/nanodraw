@@ -38,6 +38,9 @@ pub fn build(b: *std.Build) void {
     exe_mod.addImport("assets", assets);
     exe_mod.addImport("nanoui", nanoui);
     linkSqlite(exe_mod);
+    const opts = b.addOptions(); // build.zig.zon is the single source of the app version
+    opts.addOption([]const u8, "version", @import("build.zig.zon").version);
+    exe_mod.addOptions("build_options", opts);
     const exe = b.addExecutable(.{ .name = "nanodraw", .root_module = exe_mod });
     b.installArtifact(exe);
 
@@ -45,7 +48,7 @@ pub fn build(b: *std.Build) void {
     const stub = b.addWriteFiles().add("assets.zig", "pub const File = struct { path: []const u8, data: []const u8 };\npub const files = [_]File{};\n");
     const stub_assets = b.createModule(.{ .root_source_file = stub });
     const test_step = b.step("test", "Run unit tests (incl. shared WS fixture)");
-    for ([_][]const u8{ "protocol", "store", "view", "core", "net" }) |name| {
+    for ([_][]const u8{ "protocol", "store", "view", "core", "net", "log" }) |name| {
         const m = b.createModule(.{
             .root_source_file = b.path(b.fmt("src/{s}.zig", .{name})),
             .target = target,

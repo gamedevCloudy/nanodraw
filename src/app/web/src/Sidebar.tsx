@@ -1,6 +1,6 @@
 import { useEffect, useState, useSyncExternalStore } from "react";
 import logo from "./assets/logo.svg";
-import { getAgentEdits, getStatus, subscribe } from "./canvas";
+import { copyLogs, getAgentEdits, getStatus, subscribe } from "./canvas";
 import { getTheme, palette, subscribeTheme, toggleTheme } from "./theme";
 import { bridge, type ViewModel } from "./generated/bridge";
 
@@ -54,7 +54,9 @@ export function Sidebar() {
         <button style={btn(C, off)} disabled={off} onClick={() => bridge.openFile()}>Open file</button>
       </div>
       <div style={{ height: 52, flex: "none", color: C.err, fontSize: 12, display: "flex", gap: 6, overflow: "hidden" }}>
-        {banner && <><span style={{ flex: 1 }}>{banner}</span><button aria-label="Dismiss" onClick={() => setDismissed(banner)} style={{ border: 0, background: "none", color: C.err, cursor: "pointer" }}>×</button></>}
+        {banner && <><span style={{ flex: 1 }}>{banner}</span>
+          <button onClick={() => copyLogs()} style={{ alignSelf: "flex-start", border: 0, padding: 0, background: "none", color: C.err, font: "inherit", textDecoration: "underline", cursor: "pointer", whiteSpace: "nowrap" }}>Copy logs</button>
+          <button aria-label="Dismiss" onClick={() => setDismissed(banner)} style={{ border: 0, background: "none", color: C.err, cursor: "pointer" }}>×</button></>}
       </div>
       <div style={{ flex: 1, overflowY: "auto" }}>
         {vm && vm.sections.length === 0 && <div style={{ color: C.muted }}>No files yet</div>}

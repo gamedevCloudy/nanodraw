@@ -83,6 +83,19 @@ function putDoc(s: Snapshot, force = false): Promise<void> {
   return chain;
 }
 
+// Logs can pass the bridge's 16 KiB cap, so they come over loopback. WebKit may refuse a clipboard write after an
+// await (the click's user activation is spent); then Zig reads the logs and writes the clipboard natively.
+export async function copyLogs(): Promise<void> {
+  try {
+    const r = await call("/logs");
+    if (!r.ok) throw new Error(`logs: ${r.status}`);
+    await navigator.clipboard.writeText(await r.text());
+  } catch {
+    bridge.copyLogs();
+  }
+  api?.setToast({ message: "Logs copied", duration: 2000 });
+}
+
 const flushNow = () => { const s = takeSnapshot(); return s ? putDoc(s, true) : Promise.resolve(); };
 
 addEventListener("keydown", (e) => {

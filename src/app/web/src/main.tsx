@@ -4,7 +4,7 @@ import "@excalidraw/excalidraw/index.css";
 import { bridge } from "./generated/bridge";
 import { Sidebar } from "./Sidebar";
 import { useEffect, useSyncExternalStore } from "react";
-import { attach, onChange, uiOptions } from "./canvas";
+import { attach, copyLogs, onChange, uiOptions } from "./canvas";
 import { canvasBg, getTheme, subscribeTheme } from "./theme";
 
 (window as { EXCALIDRAW_ASSET_PATH?: string }).EXCALIDRAW_ASSET_PATH = "/";
@@ -19,6 +19,7 @@ function App() {
         <Excalidraw theme={theme} excalidrawAPI={attach} onChange={onChange} UIOptions={uiOptions}>
           <MainMenu>
             <MainMenu.Item onSelect={() => bridge.saveAsRequested()}>Save as…</MainMenu.Item>
+            <MainMenu.Item onSelect={() => copyLogs()}>Copy logs</MainMenu.Item>
             <MainMenu.DefaultItems.SaveAsImage />
             <MainMenu.DefaultItems.Help />
           </MainMenu>
